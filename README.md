@@ -134,8 +134,8 @@ Si tienes acceso al archivo `.pbix`:
 ## 📧 Contacto
 
 Si tienes preguntas sobre este proyecto o quieres colaborar:
-- **LinkedIn:** [Tu perfil]
-- **Email:** [Tu email]
+- **LinkedIn:** https://www.linkedin.com/in/ivostober/
+- **Email:** ivo.stober@icloud.com
 
 ---
 
