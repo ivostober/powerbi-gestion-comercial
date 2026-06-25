@@ -254,4 +254,4 @@ R: DIVIDE(..., 0) retorna 0 en lugar de error. Para otros casos, usa COALESCE o 
 
 **Última actualización:** Junio 2024  
 **Compatibilidad:** Power BI 2.100+ | DAX 2.0+  
-**Autor:** Proyecto Hard Skills
+**Autor:** Ivo Stober P.
