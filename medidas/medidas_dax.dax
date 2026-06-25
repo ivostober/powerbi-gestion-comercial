@@ -1,0 +1,272 @@
+// ========================================
+// MEDIDAS DAX - VENTAS Y KPIs
+// Dashboard de Desempeño Comercial
+// ========================================
+
+// ─────────────────────────────────────────
+// 1. VENTAS TOTALES
+// ─────────────────────────────────────────
+
+total_ventas = 
+CALCULATE(
+    SUM(ventas_comerciales[monto_venta])
+)
+
+// Descripción: Suma todas las ventas en el contexto actual
+// Uso: Métrica principal, filtrable por fecha, producto, región
+// Ejemplo: $1,230.3M en 2024
+
+
+// ─────────────────────────────────────────
+// 2. METAS TOTALES
+// ─────────────────────────────────────────
+
+total_meta = 
+VAR anio_seleccionado = 
+    IF(
+        HASONEVALUE(dim_fecha[ano]),
+        VALUES(dim_fecha[ano]),
+        MAX(dim_fecha[ano])
+    )
+RETURN
+    CALCULATE(
+        SUM(metas_comerciales[meta_venta]),
+        FILTER(
+            metas_comerciales,
+            metas_comerciales[ano] = anio_seleccionado &&
+            metas_comerciales[mes] IN VALUES(dim_fecha[mes])
+        )
+    )
+
+// Descripción: Suma de metas ajustadas por año y mes seleccionado
+// Uso: Comparativa contra ventas reales
+// Ejemplo: $1,482.1M meta vs $1,230.3M ventas (83% cumplimiento)
+
+
+// ─────────────────────────────────────────
+// 3. PORCENTAJE DE CUMPLIMIENTO
+// ─────────────────────────────────────────
+
+pct_cumplimiento = 
+DIVIDE(
+    [total_ventas],
+    [total_meta],
+    0
+)
+
+// Descripción: Ratio ventas/meta expresado como porcentaje
+// Formato: Porcentaje (2 decimales)
+// Ejemplo: 83% (significa cumplimiento del 83% respecto a meta)
+// Nota: Maneja división por cero retornando 0
+
+
+// ─────────────────────────────────────────
+// 4. VENTA ACUMULADA AÑO A LA FECHA (YTD)
+// ─────────────────────────────────────────
+
+ventas_acumuladas_ytd = 
+TOTALYTD(
+    [total_ventas],
+    dim_fecha[fecha]
+)
+
+// Descripción: Acumulado desde inicio del año a la fecha actual
+// Uso: Tracking de progreso anual
+// Ejemplo: $1,230.3M acumulado en 2024
+// Nota: TOTALYTD calcula automáticamente desde el 1 de enero
+
+
+// ─────────────────────────────────────────
+// 5. VARIACIÓN INTERANUAL (YoY)
+// ─────────────────────────────────────────
+
+ventas_vs_anio_anterior = 
+VAR anio_seleccionado = 
+    IF(
+        HASONEVALUE(dim_fecha[ano]),
+        VALUES(dim_fecha[ano]),
+        MAX(dim_fecha[ano])
+    )
+VAR ventas_actual = 
+    CALCULATE(
+        SUM(ventas_comerciales[monto_venta]),
+        dim_fecha[ano] = anio_seleccionado
+    )
+VAR ventas_anterior = 
+    CALCULATE(
+        SUM(ventas_comerciales[monto_venta]),
+        dim_fecha[ano] = anio_seleccionado - 1
+    )
+RETURN
+    DIVIDE(
+        ventas_actual - ventas_anterior,
+        ventas_anterior,
+        0
+    )
+
+// Descripción: Cambio porcentual vs. año anterior
+// Formato: Porcentaje con signo (+/-)
+// Ejemplo: -12% (significa caída de 12% respecto a 2023)
+// Inteligencia: Maneja casos donde no hay año anterior retornando 0
+
+
+// ─────────────────────────────────────────
+// 6. PROMEDIO DE VENTA POR PRODUCTO
+// ─────────────────────────────────────────
+
+promedio_venta_producto = 
+DIVIDE(
+    [total_ventas],
+    DISTINCTCOUNT(ventas_comerciales[id_venta]),
+    0
+)
+
+// Descripción: Ticket promedio (monto_venta / número de transacciones)
+// Uso: Análisis de tamaño de transacción
+// Ejemplo: $200M de promedio por venta
+
+
+// ─────────────────────────────────────────
+// 7. VARIACIÓN MENSUAL (MoM)
+// ─────────────────────────────────────────
+
+ventas_mes_anterior = 
+CALCULATE(
+    [total_ventas],
+    DATEADD(dim_fecha[fecha], -1, MONTH)
+)
+
+variacion_mensual = 
+DIVIDE(
+    [total_ventas] - [ventas_mes_anterior],
+    [ventas_mes_anterior],
+    0
+)
+
+// Descripción: Cambio respecto al mes anterior
+// Uso: Trend mensual
+
+
+// ─────────────────────────────────────────
+// 8. CUMPLIMIENTO POR PRODUCTO
+// ─────────────────────────────────────────
+
+cumplimiento_producto = 
+VAR ventas_prod = 
+    CALCULATE([total_ventas])
+VAR meta_prod = 
+    CALCULATE(
+        SUM(metas_comerciales[meta_venta])
+    )
+RETURN
+    DIVIDE(ventas_prod, meta_prod, 0)
+
+// Descripción: % cumplimiento específico por línea de producto
+// Ejemplo: Laptop 117.5%, Mouse 21.7%
+
+
+// ─────────────────────────────────────────
+// 9. CUMPLIMIENTO POR REGIÓN
+// ─────────────────────────────────────────
+
+cumplimiento_region = 
+VAR ventas_reg = 
+    CALCULATE([total_ventas])
+VAR meta_reg = 
+    CALCULATE(
+        SUM(metas_comerciales[meta_venta])
+    )
+RETURN
+    DIVIDE(ventas_reg, meta_reg, 0)
+
+// Descripción: % cumplimiento específico por geografía
+// Ejemplo: Sur 114.1%, Centro 71.4%
+
+
+// ─────────────────────────────────────────
+// 10. CONTADOR DE MESES CON META
+// ─────────────────────────────────────────
+
+meses_con_meta = 
+DISTINCTCOUNT(
+    FILTER(
+        metas_comerciales,
+        [meta_venta] > 0
+    )
+)
+
+// Descripción: Número de períodos mensuales con meta registrada
+// Uso: Validación de cobertura de datos
+
+
+// ─────────────────────────────────────────
+// NOTAS DE IMPLEMENTACIÓN
+// ─────────────────────────────────────────
+
+/*
+TABLAS DE MEDIDAS:
+Todas estas medidas deben estar en una tabla llamada "_medidas"
+que no tiene columnas de datos, solo medidas DAX.
+
+CONTEXTO Y FILTROS:
+- Las medidas responden automáticamente a slicers y filtros
+- Si filtra por producto, solo suma ventas de ese producto
+- Si filtra por región y mes, el cálculo se ajusta
+
+RENDIMIENTO:
+- Usar CALCULATE para cambiar contexto (más performante)
+- FILTER en medidas debe ser sobre dimensiones pequeñas
+- Para tablas grandes (ventas_comerciales), evitar FILTER directo
+
+VARIABLES (VAR):
+- Mejoran legibilidad y rendimiento
+- Se evalúan una sola vez
+- Úsalas para reutilizar cálculos
+
+MANEJO DE DIVISIONES:
+- DIVIDE(..., 0) retorna 0 en lugar de #DIV/0!
+- Importante para evitar errores en visualizaciones
+*/
+
+// ─────────────────────────────────────────
+// PATRONES COMUNES
+// ─────────────────────────────────────────
+
+// Patrón 1: IF + HASONEVALUE (Contexto condicional)
+IF(
+    HASONEVALUE(dim_fecha[ano]),
+    VALUES(dim_fecha[ano]),  // Si hay 1 año seleccionado
+    MAX(dim_fecha[ano])      // Si no, toma el máximo
+)
+
+// Patrón 2: CALCULATE con FILTER (Cambio de contexto)
+CALCULATE(
+    SUM(tabla[medida]),
+    FILTER(
+        tabla,
+        tabla[columna] = criterio
+    )
+)
+
+// Patrón 3: VAR para reutilización
+VAR mi_variable = CALCULATE(...)
+VAR otra_variable = CALCULATE(...)
+RETURN 
+    DIVIDE(mi_variable, otra_variable, 0)
+
+// Patrón 4: DATEADD para períodos anteriores
+CALCULATE(
+    [medida],
+    DATEADD(dim_fecha[fecha], -1, MONTH)  // Mes anterior
+)
+
+/*
+MATERIAL PARA APRENDER:
+✓ CALCULATE: Modifica contexto de filtro
+✓ FILTER: Crea tablas filtradas
+✓ HASONEVALUE: Detecta si hay un solo valor
+✓ VALUES: Retorna valor(es) seleccionado(s)
+✓ TOTALYTD: Acumula desde inicio de año
+✓ DIVIDE: División segura
+✓ DATEADD: Desplaza fechas
+*/
