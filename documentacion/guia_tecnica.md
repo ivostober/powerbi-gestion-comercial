@@ -381,5 +381,5 @@ RETURN CALCULATE(SUM(...), filtrado)
 
 ---
 
-**Última actualización:** Junio 2024  
-**Autor:** Proyecto Hard Skills
+**Última actualización:** Junio 2026  
+**Autor:** Ivo Stober P.
